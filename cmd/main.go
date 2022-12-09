@@ -205,6 +205,39 @@ var app = cli.App{
 
 			return nil
 		},
+		Subcommands: []*cli.Command{{
+			Name:  "today",
+			Usage: "number of tasks to do today",
+			Action: func(ctx *cli.Context) error {
+				entries, err := os.ReadDir(CALENDAR_DIR)
+				if err != nil {
+					return err
+				}
+
+				datetimenotes := make([]DatetimeNote, 0, len(entries))
+				for _, x := range entries {
+					if x.IsDir() || path.Ext(x.Name()) != ".md" {
+						continue
+					}
+
+					xdd, err := parse_datetimenote(path.Join(CALENDAR_DIR, x.Name()))
+					if err != nil {
+						return err
+					}
+
+					datetimenotes = append(datetimenotes, xdd)
+				}
+
+				tomorrow := time.Now().AddDate(0, 0, 1)
+
+				count := lo.CountBy(datetimenotes, func(item DatetimeNote) bool {
+					return item.date.Before(tomorrow)
+				})
+				fmt.Println(count)
+
+				return nil
+			},
+		}},
 	}},
 }
 
