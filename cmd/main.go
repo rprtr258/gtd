@@ -228,10 +228,10 @@ var app = cli.App{
 					datetimenotes = append(datetimenotes, xdd)
 				}
 
-				tomorrow := time.Now().AddDate(0, 0, 1)
+				today := time.Now().Day()
 
 				count := lo.CountBy(datetimenotes, func(item DatetimeNote) bool {
-					return item.date.Before(tomorrow)
+					return item.date.Day() == today
 				})
 				fmt.Println(count)
 
