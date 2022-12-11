@@ -9,8 +9,6 @@ import (
 	"github.com/rprtr258/gtd/internal/cmds"
 )
 
-var ()
-
 var app = cli.App{
 	Name:  "gtd",
 	Usage: "GTD utilities",
