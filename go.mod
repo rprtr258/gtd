@@ -5,7 +5,9 @@ go 1.19
 require (
 	github.com/samber/lo v1.36.0
 	github.com/urfave/cli/v2 v2.23.6
+	github.com/yuin/goldmark v1.5.3
 	gopkg.in/ini.v1 v1.67.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
