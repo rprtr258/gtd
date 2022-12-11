@@ -90,7 +90,7 @@ func parseDatetimeNote(r io.Reader) (DatetimeNote, error) {
 
 type myDate time.Time
 
-var _ = (encoding.TextUnmarshaler)(&myDate{})
+var _ = encoding.TextUnmarshaler(&myDate{})
 
 func (date *myDate) UnmarshalText(data []byte) error {
 	date1, err := time.Parse("02.01.2006", string(data))
@@ -107,10 +107,7 @@ type myPeriod struct {
 	size byte
 }
 
-var (
-	_myPeriod myPeriod
-	_         = (encoding.TextUnmarshaler)(&_myPeriod)
-)
+var _ = encoding.TextUnmarshaler(&myPeriod{})
 
 func (period *myPeriod) Apply(d time.Time) time.Time {
 	switch period.size {
@@ -212,9 +209,14 @@ var CalendarCmd = &cli.Command{
 			now := time.Now()
 
 			count := lo.CountBy(datetimenotes, func(item DatetimeNote) bool {
-				return item.date.Year() == now.Year() &&
-					item.date.Month() == now.Month() &&
-					item.date.Day() == now.Day()
+				switch {
+				case item.date.Year() != now.Year():
+					return item.date.Year() < now.Year()
+				case item.date.Month() != now.Month():
+					return item.date.Month() < now.Month()
+				default:
+					return item.date.Day() <= now.Day()
+				}
 			})
 			fmt.Println(count)
 
