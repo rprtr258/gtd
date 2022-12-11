@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -138,15 +139,6 @@ func (period *myPeriod) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func take_while[T any](p func(T) bool, xs []T) []T {
-	for i, x := range xs {
-		if !p(x) {
-			return xs[:i]
-		}
-	}
-	return xs
-}
-
 var CalendarCmd = &cli.Command{
 	Name:  "calendar",
 	Usage: "list todos with known dates",
@@ -172,8 +164,39 @@ var CalendarCmd = &cli.Command{
 			}
 		}
 
-		// fmt.Println("2", os.Getenv("ROFI_INFO"))
-		// TODO: open
+		filename := path.Join(CALENDAR_DIR, os.Getenv("ROFI_INFO"))
+
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+
+		note, err := parseDatetimeNote(file)
+		if err != nil {
+			return err
+		}
+
+		if note.nextDate == nil {
+			return nil
+		}
+
+		input, err := os.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+
+		lines := strings.Split(string(input), "\n")
+
+		for i, line := range lines {
+			if strings.HasPrefix(line, "date:") {
+				lines[i] = fmt.Sprintf("date: %s", note.nextDate.Format("02.01.2006"))
+			}
+		}
+		output := strings.Join(lines, "\n")
+		err = os.WriteFile(filename, []byte(output), 0644)
+		if err != nil {
+			return err
+		}
 
 		return nil
 	},
