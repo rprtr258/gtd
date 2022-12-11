@@ -155,7 +155,7 @@ var CalendarCmd = &cli.Command{
 			return fmt.Errorf("more than one argument provided")
 		}
 
-		if len(args) == 0 {
+		if os.Getenv("ROFI_RETV") == "0" {
 			datetimenotes, err := getCalendar(CALENDAR_DIR)
 			if err != nil {
 				return err
@@ -172,9 +172,12 @@ var CalendarCmd = &cli.Command{
 				Else(take_while(func(dtn DatetimeNote) bool { return dtn.date.Before(tomorrow_datetime) }, datetimenotes))
 
 			for _, line := range iterr {
-				fmt.Println(line)
+				// fmt.Printf("%s\x00icon\x1ffolder\x1finfo\x1fxdd",line)
+				fmt.Printf("%s\x00info\x1fxdd\n", line)
 			}
 		}
+
+		// fmt.Println("2", os.Getenv("ROFI_INFO"))
 		// TODO: open
 
 		return nil
