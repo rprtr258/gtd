@@ -166,12 +166,12 @@ var CalendarCmd = &cli.Command{
 				continue
 			}
 
-			xdd, err := parseDatetimeNote(path.Join(CALENDAR_DIR, x.Name()))
+			datetimeNote, err := parseDatetimeNote(path.Join(CALENDAR_DIR, x.Name()))
 			if err != nil {
 				return fmt.Errorf("failed parsing %s: %w", x.Name(), err)
 			}
 
-			datetimenotes = append(datetimenotes, xdd)
+			datetimenotes = append(datetimenotes, datetimeNote)
 		}
 
 		sort.Slice(datetimenotes, func(i, j int) bool {
