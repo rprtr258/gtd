@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding"
 	"errors"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -23,9 +21,7 @@ import (
 )
 
 var (
-	IN_DIR           = path.Join(cmds.GTD_DIR, "in/")
-	NEXT_ACTIONS_DIR = path.Join(cmds.GTD_DIR, "next_actions/")
-	CALENDAR_DIR     = path.Join(cmds.GTD_DIR, "calendar/")
+	CALENDAR_DIR = path.Join(cmds.GTD_DIR, "calendar/")
 )
 
 var app = cli.App{
@@ -34,84 +30,8 @@ var app = cli.App{
 	Commands: []*cli.Command{
 		cmds.BookmarksCmd,
 		cmds.FincCmd,
-		{
-			Name:  "in",
-			Usage: "add to in directory",
-			Action: func(ctx *cli.Context) error {
-				args := ctx.Args().Slice()
-				if len(args) >= 2 {
-					return fmt.Errorf("more than one argument provided")
-				}
-
-				if len(args) == 0 {
-					entries, err := os.ReadDir(IN_DIR)
-					if err != nil {
-						return err
-					}
-
-					for _, file := range entries {
-						if file.IsDir() {
-							fmt.Println(file.Name())
-						} else if path.Ext(file.Name()) == ".md" {
-							line, err := readLine(path.Join(IN_DIR, file.Name()))
-							if err != nil {
-								return err
-							}
-
-							fmt.Printf("%s: %s\n", file.Name(), line)
-						}
-					}
-					return nil
-				}
-
-				param := args[0]
-				// TODO: open dir
-				if strings.Contains(param, ".md") { // TODO: fix no ".md" in output
-					return cmds.Open(ctx.Context, path.Join(IN_DIR, param[:strings.Index(param, ": ")]))
-				} else if !strings.Contains(param, ".md: ") {
-					words := strings.Split(param, " ")
-					// TODO: create new if already exists
-					return os.WriteFile(path.Join(IN_DIR, words[0]+".md"), []byte(param+"\n"), 0o644)
-				}
-
-				return nil
-			},
-		},
-		{
-			Name:  "actions",
-			Usage: "list next actions",
-			Action: func(ctx *cli.Context) error {
-				args := ctx.Args().Slice()
-				if len(args) >= 2 {
-					return fmt.Errorf("more than one argument provided")
-				}
-
-				if len(args) == 0 {
-					entries, err := os.ReadDir(NEXT_ACTIONS_DIR)
-					if err != nil {
-						return err
-					}
-
-					for _, file := range entries {
-						if file.IsDir() || path.Ext(file.Name()) != ".md" {
-							continue
-						}
-
-						line, err := readLine(path.Join(NEXT_ACTIONS_DIR, file.Name()))
-						if err != nil {
-							return err
-						}
-
-						fmt.Printf("%s: %s\n", file.Name(), line)
-					}
-					return nil
-				}
-
-				// param := args[0]
-				// TODO: open file/clip content
-				return nil
-			},
-		},
+		cmds.InCmd,
+		cmds.ActionsCmd,
 		{
 			Name:  "calendar",
 			Usage: "list todos with known dates",
@@ -319,20 +239,6 @@ func take_while[T any](p func(T) bool, xs []T) []T {
 		}
 	}
 	return xs
-}
-
-func readLine(filename string) (string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-
-	buf := bufio.NewScanner(file)
-	for buf.Scan() {
-		return buf.Text(), nil
-	}
-
-	return "", errors.New("no lines scanned")
 }
 
 func main() {

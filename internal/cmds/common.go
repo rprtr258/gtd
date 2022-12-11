@@ -1,7 +1,9 @@
 package cmds
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"syscall"
@@ -46,4 +48,18 @@ func CheckOutput(ctx context.Context, args []string, cwd string) (string, error)
 
 	bytes, err := cmd.Output()
 	return string(bytes), err
+}
+
+func readLine(filename string) (string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+
+	buf := bufio.NewScanner(file)
+	for buf.Scan() {
+		return buf.Text(), nil
+	}
+
+	return "", errors.New("no lines scanned")
 }
