@@ -186,10 +186,12 @@ var CalendarCmd = &cli.Command{
 				return err
 			}
 
-			today := time.Now().Day()
+			now := time.Now()
 
 			count := lo.CountBy(datetimenotes, func(item DatetimeNote) bool {
-				return item.date.Day() == today
+				return item.date.Year() == now.Year() &&
+					item.date.Month() == now.Month() &&
+					item.date.Day() == now.Day()
 			})
 			fmt.Println(count)
 
