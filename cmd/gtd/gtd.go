@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding"
 	"errors"
 	"fmt"
 	"log"
@@ -16,7 +18,10 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/urfave/cli/v2"
+	gm "github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/text"
 	"gopkg.in/ini.v1"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -182,7 +187,7 @@ var app = cli.App{
 
 				xdd, err := parse_datetimenote(path.Join(CALENDAR_DIR, x.Name()))
 				if err != nil {
-					return err
+					return fmt.Errorf("failed parsing %s: %w", x.Name(), err)
 				}
 
 				datetimenotes = append(datetimenotes, xdd)
@@ -258,62 +263,105 @@ func (note DatetimeNote) String() string {
 }
 
 func parse_datetimenote(filename string) (DatetimeNote, error) {
-	var (
-		title    *string
-		date     *time.Time
-		new_date *time.Time
-	)
-
-	file, err := os.Open(filename)
+	// file, err := os.Open(filename)
+	file, err := os.ReadFile(filename)
 	if err != nil {
 		return DatetimeNote{}, err
 	}
 
-	buf := bufio.NewScanner(file)
-	for buf.Scan() {
-		line := strings.Trim(buf.Text(), " \r\n\t")
-		if strings.HasPrefix(line, "# ") { // TODO: migrate to markdown metadata headers
-			title = lo.ToPtr(line[2:])
-		} else if strings.HasPrefix(line, "Date: ") {
-			date_str := line[len("Date: "):]
-			date1, err := time.Parse("02.01.2006", date_str)
-			if err != nil {
-				return DatetimeNote{}, fmt.Errorf("invalid date found, date=%q: %w", date_str, err)
-			}
-			date = &date1
-		} else if strings.HasPrefix(line, "Period: ") {
-			if date == nil {
-				return DatetimeNote{}, errors.New("period found before date header")
-			}
+	node := gm.New().Parser().Parse(text.NewReader(file))
 
-			period_str := line[len("Period: "):]
-			var (
-				period_cnt  int
-				period_size byte
-			)
-			fmt.Sscanf(period_str, "%d%c", &period_cnt, &period_size)
-			period_size2 := map[byte]func(time.Time, int) time.Time{
-				'y': func(d time.Time, cnt int) time.Time { return date.AddDate(cnt, 0, 0) },
-				'm': func(d time.Time, cnt int) time.Time { return date.AddDate(0, cnt, 0) },
-				'w': func(d time.Time, cnt int) time.Time { return date.AddDate(0, 0, 7*cnt) },
-				'd': func(d time.Time, cnt int) time.Time { return date.AddDate(0, 0, cnt) },
-			}[period_size](*date, period_cnt)
-			new_date = &period_size2
-		}
+	var metadata string
+	if true { // TODO: many safety checks
+		lines := node.
+			FirstChild().
+			NextSibling().
+			Lines()
+		metadata = string(file[lines.At(0).Start:lines.At(lines.Len()-1).Stop])
+	} else {
+		return DatetimeNote{}, errors.New("incorrect file")
 	}
 
-	if title == nil {
-		return DatetimeNote{}, errors.New("no title found")
+	type metadataT struct {
+		Title  *string   `yaml:"title"`
+		Date   *myDate   `yaml:"date"`
+		Period *myPeriod `yaml:"period"`
 	}
-	if date == nil {
-		return DatetimeNote{}, errors.New("no date found")
+	var meta metadataT
+	if err := yaml.NewDecoder(bytes.NewReader([]byte(metadata + "\n"))).Decode(&meta); err != nil {
+		return DatetimeNote{}, err
+	}
+
+	if meta.Date == nil {
+		return DatetimeNote{}, errors.New("date is missing")
+	}
+
+	if meta.Title == nil {
+		return DatetimeNote{}, errors.New("title is missing")
+	}
+
+	var new_date *time.Time
+	if meta.Period != nil {
+		xdd := meta.Period.Apply(time.Time(*meta.Date))
+		new_date = &xdd
 	}
 
 	return DatetimeNote{
-		title:    *title,
-		date:     *date,
+		title:    *meta.Title,
+		date:     time.Time(*meta.Date),
 		nextDate: new_date,
 	}, nil
+}
+
+type myDate time.Time
+
+var _ = (encoding.TextUnmarshaler)(&myDate{})
+
+func (date *myDate) UnmarshalText(data []byte) error {
+	date1, err := time.Parse("02.01.2006", string(data))
+	if err != nil {
+		return fmt.Errorf("invalid date, date=%q: %w", string(data), err)
+	}
+
+	*date = myDate(date1)
+	return nil
+}
+
+type myPeriod struct {
+	cnt  int
+	size byte
+}
+
+var (
+	_myPeriod myPeriod
+	_         = (encoding.TextUnmarshaler)(&_myPeriod)
+)
+
+func (period *myPeriod) Apply(d time.Time) time.Time {
+	switch period.size {
+	case 'y':
+		return d.AddDate(period.cnt, 0, 0)
+	case 'm':
+		return d.AddDate(0, period.cnt, 0)
+	case 'w':
+		return d.AddDate(0, 0, 7*period.cnt)
+	case 'd':
+		return d.AddDate(0, 0, period.cnt)
+	default:
+		panic(fmt.Errorf("invalid period %+v", period))
+	}
+}
+
+func (period *myPeriod) UnmarshalText(data []byte) error {
+	if _, err := fmt.Sscanf(string(data), "%d%c", &period.cnt, &period.size); err != nil {
+		return fmt.Errorf("failed scanning: %w", err)
+	}
+	switch period.size {
+	case 'y', 'm', 'w', 'd':
+	default:
+		return fmt.Errorf("invalid period: %s", string(data))
+	}
+	return nil
 }
 
 func take_while[T any](p func(T) bool, xs []T) []T {
