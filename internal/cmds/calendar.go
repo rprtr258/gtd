@@ -5,6 +5,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
@@ -35,9 +36,8 @@ func (note DatetimeNote) String() string {
 		ElseF(func() string { return fmt.Sprintf(" (next in %s)", note.nextDate.Format("Monday, 02 January 2006")) }) // TODO: check/rewrite?
 }
 
-func parseDatetimeNote(filename string) (DatetimeNote, error) {
-	// file, err := os.Open(filename)
-	file, err := os.ReadFile(filename)
+func parseDatetimeNote(r io.Reader) (DatetimeNote, error) {
+	file, err := io.ReadAll(r)
 	if err != nil {
 		return DatetimeNote{}, err
 	}
@@ -166,7 +166,12 @@ var CalendarCmd = &cli.Command{
 				continue
 			}
 
-			datetimeNote, err := parseDatetimeNote(path.Join(CALENDAR_DIR, x.Name()))
+			file, err := os.Open(path.Join(CALENDAR_DIR, x.Name()))
+			if err != nil {
+				return fmt.Errorf("failed opening file %s: %w", x.Name(), err)
+			}
+
+			datetimeNote, err := parseDatetimeNote(file)
 			if err != nil {
 				return fmt.Errorf("failed parsing %s: %w", x.Name(), err)
 			}
@@ -206,7 +211,12 @@ var CalendarCmd = &cli.Command{
 					continue
 				}
 
-				xdd, err := parseDatetimeNote(path.Join(CALENDAR_DIR, x.Name()))
+				file, err := os.Open(path.Join(CALENDAR_DIR, x.Name()))
+				if err != nil {
+					return fmt.Errorf("failed opening %s: %w", x.Name(), err)
+				}
+
+				xdd, err := parseDatetimeNote(file)
 				if err != nil {
 					return err
 				}
