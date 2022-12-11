@@ -155,23 +155,25 @@ var CalendarCmd = &cli.Command{
 			return fmt.Errorf("more than one argument provided")
 		}
 
-		datetimenotes, err := getCalendar(CALENDAR_DIR)
-		if err != nil {
-			return err
-		}
+		if len(args) == 0 {
+			datetimenotes, err := getCalendar(CALENDAR_DIR)
+			if err != nil {
+				return err
+			}
 
-		sort.Slice(datetimenotes, func(i, j int) bool {
-			return datetimenotes[i].date.Before(datetimenotes[j].date)
-		})
+			sort.Slice(datetimenotes, func(i, j int) bool {
+				return datetimenotes[i].date.Before(datetimenotes[j].date)
+			})
 
-		tomorrow_datetime := time.Now().AddDate(0, 0, 1)
+			tomorrow_datetime := time.Now().AddDate(0, 0, 1)
 
-		iterr := lo.
-			If(len(args) == 0, datetimenotes).
-			Else(take_while(func(dtn DatetimeNote) bool { return dtn.date.Before(tomorrow_datetime) }, datetimenotes))
+			iterr := lo.
+				If(len(args) == 0, datetimenotes).
+				Else(take_while(func(dtn DatetimeNote) bool { return dtn.date.Before(tomorrow_datetime) }, datetimenotes))
 
-		for _, line := range iterr {
-			fmt.Println(line)
+			for _, line := range iterr {
+				fmt.Println(line)
+			}
 		}
 		// TODO: open
 
