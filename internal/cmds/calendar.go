@@ -21,6 +21,7 @@ import (
 var CALENDAR_DIR = path.Join(GTD_DIR, "calendar/")
 
 type DatetimeNote struct {
+	filename string
 	title    string
 	date     time.Time
 	nextDate *time.Time
@@ -165,15 +166,9 @@ var CalendarCmd = &cli.Command{
 				return datetimenotes[i].date.Before(datetimenotes[j].date)
 			})
 
-			tomorrow_datetime := time.Now().AddDate(0, 0, 1)
-
-			iterr := lo.
-				If(len(args) == 0, datetimenotes).
-				Else(take_while(func(dtn DatetimeNote) bool { return dtn.date.Before(tomorrow_datetime) }, datetimenotes))
-
-			for _, line := range iterr {
+			for _, line := range datetimenotes {
 				// fmt.Printf("%s\x00icon\x1ffolder\x1finfo\x1fxdd",line)
-				fmt.Printf("%s\x00info\x1fxdd\n", line)
+				fmt.Printf("%s\x00info\x1f%s\n", line, line.filename)
 			}
 		}
 
@@ -227,6 +222,7 @@ func getCalendar(dir string) ([]DatetimeNote, error) {
 			return nil, fmt.Errorf("failed parsing %s: %w", x.Name(), err)
 		}
 
+		datetimeNote.filename = x.Name()
 		datetimenotes = append(datetimenotes, datetimeNote)
 	}
 
