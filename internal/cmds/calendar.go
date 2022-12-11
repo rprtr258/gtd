@@ -216,12 +216,12 @@ var CalendarCmd = &cli.Command{
 					return fmt.Errorf("failed opening %s: %w", x.Name(), err)
 				}
 
-				xdd, err := parseDatetimeNote(file)
+				datetimeNote, err := parseDatetimeNote(file)
 				if err != nil {
 					return err
 				}
 
-				datetimenotes = append(datetimenotes, xdd)
+				datetimenotes = append(datetimenotes, datetimeNote)
 			}
 
 			today := time.Now().Day()
