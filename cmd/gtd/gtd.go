@@ -3,17 +3,14 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/samber/lo"
@@ -36,34 +33,7 @@ var app = cli.App{
 	Usage: "GTD utilities",
 	Commands: []*cli.Command{
 		cmds.BookmarksCmd,
-		{
-			Name:  "find",
-			Usage: "search through gtd files",
-			Action: func(ctx *cli.Context) error {
-				args := ctx.Args().Slice()
-				if len(args) >= 2 {
-					return fmt.Errorf("more than one argument provided")
-				}
-
-				if len(args) == 0 {
-					// TODO: open file
-					return nil
-				}
-
-				param := args[0]
-				// TODO: open file
-				// TODO: don't search binary files
-				// TODO: print results nicely
-				// TODO: search in file names also
-				out, err := checkOutput(ctx.Context, []string{"rg", param, "-i", "--iglob", "*.md"}, cmds.GTD_DIR)
-				if err != nil {
-					return err
-				}
-
-				fmt.Println(out)
-				return nil
-			},
-		},
+		cmds.FincCmd,
 		{
 			Name:  "in",
 			Usage: "add to in directory",
@@ -349,17 +319,6 @@ func take_while[T any](p func(T) bool, xs []T) []T {
 		}
 	}
 	return xs
-}
-
-func checkOutput(ctx context.Context, args []string, cwd string) (string, error) {
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Dir = cwd
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-
-	bytes, err := cmd.Output()
-	return string(bytes), err
 }
 
 func readLine(filename string) (string, error) {

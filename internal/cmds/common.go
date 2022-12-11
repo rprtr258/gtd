@@ -36,3 +36,14 @@ func Run(ctx context.Context, executable string, args ...string) error {
 func Open(ctx context.Context, open_what string) error {
 	return Run(ctx, "/usr/bin/open", open_what)
 }
+
+func CheckOutput(ctx context.Context, args []string, cwd string) (string, error) {
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd.Dir = cwd
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+
+	bytes, err := cmd.Output()
+	return string(bytes), err
+}
