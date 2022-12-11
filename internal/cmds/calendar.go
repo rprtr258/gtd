@@ -155,28 +155,9 @@ var CalendarCmd = &cli.Command{
 			return fmt.Errorf("more than one argument provided")
 		}
 
-		entries, err := os.ReadDir(CALENDAR_DIR)
+		datetimenotes, err := getCalendar(CALENDAR_DIR)
 		if err != nil {
 			return err
-		}
-
-		datetimenotes := make([]DatetimeNote, 0, len(entries))
-		for _, x := range entries {
-			if x.IsDir() || path.Ext(x.Name()) != ".md" {
-				continue
-			}
-
-			file, err := os.Open(path.Join(CALENDAR_DIR, x.Name()))
-			if err != nil {
-				return fmt.Errorf("failed opening file %s: %w", x.Name(), err)
-			}
-
-			datetimeNote, err := parseDatetimeNote(file)
-			if err != nil {
-				return fmt.Errorf("failed parsing %s: %w", x.Name(), err)
-			}
-
-			datetimenotes = append(datetimenotes, datetimeNote)
 		}
 
 		sort.Slice(datetimenotes, func(i, j int) bool {
@@ -200,28 +181,9 @@ var CalendarCmd = &cli.Command{
 		Name:  "today",
 		Usage: "number of tasks to do today",
 		Action: func(ctx *cli.Context) error {
-			entries, err := os.ReadDir(CALENDAR_DIR)
+			datetimenotes, err := getCalendar(CALENDAR_DIR)
 			if err != nil {
 				return err
-			}
-
-			datetimenotes := make([]DatetimeNote, 0, len(entries))
-			for _, x := range entries {
-				if x.IsDir() || path.Ext(x.Name()) != ".md" {
-					continue
-				}
-
-				file, err := os.Open(path.Join(CALENDAR_DIR, x.Name()))
-				if err != nil {
-					return fmt.Errorf("failed opening %s: %w", x.Name(), err)
-				}
-
-				datetimeNote, err := parseDatetimeNote(file)
-				if err != nil {
-					return err
-				}
-
-				datetimenotes = append(datetimenotes, datetimeNote)
 			}
 
 			today := time.Now().Day()
@@ -234,4 +196,32 @@ var CalendarCmd = &cli.Command{
 			return nil
 		},
 	}},
+}
+
+func getCalendar(dir string) ([]DatetimeNote, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read dir %s failed: %w", dir, err)
+	}
+
+	datetimenotes := make([]DatetimeNote, 0, len(entries))
+	for _, x := range entries {
+		if x.IsDir() || path.Ext(x.Name()) != ".md" {
+			continue
+		}
+
+		file, err := os.Open(path.Join(dir, x.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("failed opening file %s: %w", x.Name(), err)
+		}
+
+		datetimeNote, err := parseDatetimeNote(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing %s: %w", x.Name(), err)
+		}
+
+		datetimenotes = append(datetimenotes, datetimeNote)
+	}
+
+	return datetimenotes, nil
 }
