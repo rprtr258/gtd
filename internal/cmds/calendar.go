@@ -159,6 +159,8 @@ var CalendarCmd = &cli.Command{
 				// fmt.Printf("%s\x00icon\x1ffolder\x1finfo\x1fxdd",line)
 				fmt.Printf("%s\x00info\x1f%s\n", line, line.filename)
 			}
+
+			return nil
 		}
 
 		filename := path.Join(CALENDAR_DIR, os.Getenv("ROFI_INFO"))
