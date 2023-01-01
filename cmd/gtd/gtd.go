@@ -16,7 +16,6 @@ var app = cli.App{
 		cmds.BookmarksCmd,
 		cmds.FincCmd,
 		cmds.InCmd,
-		cmds.ActionsCmd,
 		cmds.CalendarCmd,
 	},
 }
