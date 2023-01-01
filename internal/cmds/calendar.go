@@ -17,6 +17,8 @@ import (
 	gm "github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/text"
 	"gopkg.in/yaml.v2"
+
+	"github.com/rprtr258/gtd/internal/rofi"
 )
 
 var CALENDAR_DIR = path.Join(GTD_DIR, "calendar/")
@@ -29,13 +31,27 @@ type DatetimeNote struct {
 }
 
 func formatDateFuckingPretty(d time.Time) string {
-	return fmt.Sprintf("%8s, %2d %8s %d", d.Weekday().String(), d.Day(), d.Month().String(), d.Year())
+	weekday := d.Weekday().String()[:2]
+	day := d.Day()
+	month := d.Month().String()[:3]
+	year := d.Year()
+	return fmt.Sprintf("%s, %2d %s %d", weekday, day, month, year)
+}
+
+func padRight(line string, cnt int) string {
+	realCnt := lo.If(lo.RuneLength(line) < cnt, cnt-lo.RuneLength(line)).Else(0)
+	return line + strings.Repeat(" ", realCnt)
 }
 
 func (note DatetimeNote) String() string {
-	return fmt.Sprintf("%s: %30s", formatDateFuckingPretty(note.date), note.title) + lo.
+	date := formatDateFuckingPretty(note.date)
+	title := padRight(note.title, 30)
+	nextIn := lo.
 		If(note.nextDate == nil, "").
-		ElseF(func() string { return fmt.Sprintf(" (next in %s)", note.nextDate.Format("Monday, 02 January 2006")) }) // TODO: check/rewrite?
+		ElseF(func() string {
+			return fmt.Sprintf(" (next in %s)", formatDateFuckingPretty(*note.nextDate))
+		})
+	return fmt.Sprintf("%s: %s%s", date, title, nextIn)
 }
 
 func parseDatetimeNote(r io.Reader) (DatetimeNote, error) {
@@ -145,7 +161,7 @@ var CalendarCmd = &cli.Command{
 			return fmt.Errorf("more than one argument provided")
 		}
 
-		if os.Getenv("ROFI_RETV") == "0" {
+		if rofi.IsFirstOpen() {
 			datetimenotes, err := getCalendar(CALENDAR_DIR)
 			if err != nil {
 				return err
@@ -156,14 +172,13 @@ var CalendarCmd = &cli.Command{
 			})
 
 			for _, line := range datetimenotes {
-				// fmt.Printf("%s\x00icon\x1ffolder\x1finfo\x1fxdd",line)
-				fmt.Printf("%s\x00info\x1f%s\n", line, line.filename)
+				rofi.YieldItemWithInfo(line.String(), line.filename)
 			}
 
 			return nil
 		}
 
-		filename := path.Join(CALENDAR_DIR, os.Getenv("ROFI_INFO"))
+		filename := path.Join(CALENDAR_DIR, rofi.GetInfo())
 
 		file, err := os.Open(filename)
 		if err != nil {
